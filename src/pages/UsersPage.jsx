@@ -3,7 +3,7 @@ import UsersTable from "../components/UsersTable";
 
 export default function UsersPage() {
   return (
-    <div className="min-h-screen bg-[#141414] text-white">
+    <div className="min-h-screen bg-[#0b1120] text-white">
       
       {/* Navbar */}
       <Navbar />

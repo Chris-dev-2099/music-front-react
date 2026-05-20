@@ -1,81 +1,96 @@
-// services/usersService.js
+import api from "./api";
 
-let usersDB = [
-  {
-    id: 1,
-    name: "Admin",
-    email: "admin@mail.com",
-    role: "admin",
-  },
-  {
-    id: 2,
-    name: "User Demo",
-    email: "user@mail.com",
-    role: "user",
-  },
-];
-
-const fakeDelay = (ms) => new Promise((res) => setTimeout(res, ms));
+// const isMock = true;
 
 export const getUsers = async () => {
-  await fakeDelay(500);
-  return [...usersDB];
+  try {
+    const response = await api.get("/users");
+    return response.data;
+  } catch (error) {
+    throw {
+      message:
+        error.response?.data?.message ||
+        "Error al obtener usuarios",
+      status:
+        error.response?.status || 500,
+    };
+  }
 };
-
 
 export const getUserById = async (id) => {
-  await fakeDelay(300);
-  return usersDB.find((user) => user.id === id);
-};
-
-export const createUser = async (data) => {
-  await fakeDelay(500);
-
-  // Validación básica
-  if (!data.name || !data.email) {
+  try {
+    const response = await api.get(`/users/${id}`);
+    return response.data;
+  } catch (error) {
     throw {
-      message: "Nombre y correo son obligatorios",
-      status: 400,
+      message:
+        error.response?.data?.message ||
+        "Error al obtener usuario",
+
+      status:
+        error.response?.status || 500,
     };
   }
+};
 
-  // Validar email duplicado
-  const exists = usersDB.find((u) => u.email === data.email);
-  if (exists) {
+export const createUser = async ({ username, email, role, password,}) => {
+  try {
+    const response = await api.post("/users/register", {
+      nombre_usuario: username,
+      correo: email,
+      tipo_usuario: role,
+      contrasena: password,
+    });
+    return response.data;
+  } catch (error) {
     throw {
-      message: "El correo ya existe",
-      status: 400,
+      message: error.response?.data?.message || "Error al registrar usuario",
+      status: error.response?.status || 500,
     };
   }
-
-  const newUser = {
-    id: Date.now(),
-    name: data.name,
-    email: data.email,
-    password: data.password, 
-    role: data.role || "user",
-  };
-
-  usersDB.push(newUser);
-
-  return newUser;
 };
 
-export const updateUser = async (id, data) => {
-  await fakeDelay(500);
-
-  usersDB = usersDB.map((user) =>
-    user.id === id ? { ...user, ...data } : user
-  );
-
-  return usersDB.find((user) => user.id === id);
+export const updateUser = async (id,{ username,email,role,password }) => {
+  try {
+    const body = {
+      nombre_usuario: username,
+      correo: email,
+      tipo_usuario: role,
+    };
+    if (password?.trim()) {
+      body.contrasena = password;
+    }
+    const response = await api.put(`/users/${id}`,body);
+    return response.data;
+  } catch (error) {
+    throw {
+      message: error.response?.data?.message || "Error al actualizar usuario",
+      status: error.response?.status || 500,
+    };
+  }
 };
-
 
 export const deleteUser = async (id) => {
-  await fakeDelay(500);
 
-  usersDB = usersDB.filter((user) => user.id !== id);
+  try {
 
-  return { success: true };
+    const response = await api.delete(
+      `/users/${id}`
+    );
+
+    return response.data;
+
+  } catch (error) {
+
+    throw {
+      message:
+        error.response?.data?.message ||
+        "Error al eliminar usuario",
+
+      status:
+        error.response?.status || 500,
+    };
+
+  }
+
 };
