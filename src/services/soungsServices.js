@@ -152,6 +152,12 @@ export const updateSong = async (
     imagen,
   }
 ) => {
+  console.log("Updating song with ID:", id, "Data:", {
+    nombre_cancion,
+    artista_cancion,
+    genero,
+    imagen,
+  });
   try {
     if (isMock) {
       await fakeDelay(500);
@@ -193,7 +199,12 @@ export const updateSong = async (
 
     const response = await api.put(
       `/song/${id}`,
-      formData
+      formData,
+        {
+          headers: {
+            "Content-Type":"multipart/form-data",
+          },
+        }
     );
 
     return response.data;

@@ -1,7 +1,8 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: "https://consent-surface-craving.ngrok-free.dev/api/v1",
+  // baseURL: "https://consent-surface-craving.ngrok-free.dev/api/v1",
+  baseURL: "https://apimusic.ca-arboleda26.workers.dev/api/v1",
   headers: {
     "Content-Type": "application/json",
     "ngrok-skip-browser-warning": "true",

@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
+
 import {
   getSongs,
   uploadSong,
+  updateSong,
   deleteSong,
   downloadSong,
 } from "../services/soungsServices";
@@ -18,12 +20,18 @@ export default function SongsTable() {
   const [songToDelete, setSongToDelete] =
     useState(null);
 
+  const [isEditMode, setIsEditMode] =
+    useState(false);
+
+  const [songToEdit, setSongToEdit] =
+    useState(null);
+
   const [newSong, setNewSong] = useState({
     nombre_cancion: "",
     artista_cancion: "",
     genero: "",
     file: null,
-    image: null,
+    imagen: null,
     preview: "",
     imagePreview: "",
   });
@@ -36,18 +44,70 @@ export default function SongsTable() {
 
       setSongs(response.data || []);
     } catch (error) {
-      toast.error(error.message);
+      toast.error(
+        error.message ||
+          "Error cargando canciones"
+      );
     } finally {
       setLoading(false);
     }
   };
 
-    useEffect(() => {
-        const fetchSongs = async () => {
-            await loadSongs();
-        };
-        fetchSongs();
-    }, []);
+  useEffect(() => {
+    loadSongs();
+  }, []);
+
+  const resetForm = () => {
+    setNewSong({
+      nombre_cancion: "",
+      artista_cancion: "",
+      genero: "",
+      file: null,
+      imagen: null,
+      preview: "",
+      imagePreview: "",
+    });
+
+    setIsEditMode(false);
+
+    setSongToEdit(null);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+
+    resetForm();
+  };
+
+  const handleEditSong = (song) => {
+    setSongToEdit(song);
+
+    setNewSong({
+      nombre_cancion:
+        song.nombre_cancion || "",
+      artista_cancion:
+        song.artista_cancion || "",
+      genero: Array.isArray(song.genero)
+        ? song.genero.join(", ")
+        : "",
+      file: null,
+
+      // IMPORTANTE:
+      // nunca guardar string URL aquí
+      // porque "imagen" debe ser File
+      imagen: null,
+
+      preview: song.url || "",
+      imagePreview:
+        song.imagen ||
+        song.imagen_url ||
+        "",
+    });
+
+    setIsEditMode(true);
+
+    setIsModalOpen(true);
+  };
 
   const handleDelete = async () => {
     if (!songToDelete) return;
@@ -65,11 +125,16 @@ export default function SongsTable() {
         )
       );
 
-      toast.success("Canción eliminada");
+      toast.success(
+        "Canción eliminada"
+      );
 
       setSongToDelete(null);
     } catch (error) {
-      toast.error(error.message);
+      toast.error(
+        error.message ||
+          "Error eliminando canción"
+      );
     }
   };
 
@@ -81,15 +146,11 @@ export default function SongsTable() {
         archivoKey
       );
 
-      const url =
-        window.URL.createObjectURL(blob);
-
-      const link =
-        document.createElement("a");
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
 
       link.href = url;
       link.download = archivoKey;
-
       document.body.appendChild(link);
 
       link.click();
@@ -98,33 +159,25 @@ export default function SongsTable() {
 
       window.URL.revokeObjectURL(url);
 
-      toast.success("Descarga iniciada");
+      toast.success(
+        "Descarga iniciada"
+      );
     } catch (error) {
-      toast.error(error.message);
+      toast.error(
+        error.message ||
+          "Error descargando canción"
+      );
     }
   };
 
-  const resetForm = () => {
-    setNewSong({
-      nombre_cancion: "",
-      artista_cancion: "",
-      genero: "",
-      file: null,
-      image: null,
-      preview: "",
-      imagePreview: "",
-    });
-  };
-
-  const handleUploadSong = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     try {
       if (
-        !newSong.nombre_cancion ||
-        !newSong.artista_cancion ||
-        !newSong.genero ||
-        !newSong.file
+        !newSong.nombre_cancion.trim() ||
+        !newSong.artista_cancion.trim() ||
+        !newSong.genero.trim()
       ) {
         toast.error(
           "Todos los campos son obligatorios"
@@ -133,30 +186,71 @@ export default function SongsTable() {
         return;
       }
 
-      await uploadSong({
-        nombre_cancion:
-          newSong.nombre_cancion,
-        artista_cancion:
-          newSong.artista_cancion,
-        genero: newSong.genero
+      const generoArray =
+        newSong.genero
           .split(",")
           .map((item) => item.trim())
-          .filter(Boolean),
-        file: newSong.file,
-        imagen: newSong.image,
-      });
+          .filter(Boolean);
 
-      setIsModalOpen(false);
+      if (isEditMode) {
+        const payload = {
+          nombre_cancion:
+            newSong.nombre_cancion,
+          artista_cancion:
+            newSong.artista_cancion,
+          genero: generoArray,
+        };
 
-      resetForm();
+        // SOLO enviar imagen
+        // si es realmente un File
+        if (
+          newSong.imagen &&
+          newSong.imagen instanceof File
+        ) {
+          payload.imagen =
+            newSong.imagen;
+        }
+
+        await updateSong(
+          songToEdit.id_cancion,
+          payload
+        );
+
+        toast.success(
+          "Canción actualizada"
+        );
+      } else {
+        if (!newSong.file) {
+          toast.error(
+            "Debes subir un archivo de audio"
+          );
+
+          return;
+        }
+
+        await uploadSong({
+          nombre_cancion:
+            newSong.nombre_cancion,
+          artista_cancion:
+            newSong.artista_cancion,
+          genero: generoArray,
+          file: newSong.file,
+          imagen: newSong.imagen,
+        });
+
+        toast.success(
+          "Canción subida correctamente"
+        );
+      }
+
+      closeModal();
 
       await loadSongs();
-
-      toast.success(
-        "Canción subida correctamente"
-      );
     } catch (error) {
-      toast.error(error.message);
+      toast.error(
+        error.message ||
+          "Ocurrió un error"
+      );
     }
   };
 
@@ -179,10 +273,11 @@ export default function SongsTable() {
           </div>
 
           <button
-            onClick={() =>
-              setIsModalOpen(true)
-            }
-            className="bg-cyan-500/20 border border-cyan-400/20 text-cyan-300 px-5 py-2.5 rounded-xl font-medium cursor-pointer hover:bg-cyan-400 hover:text-black hover:shadow-[0_0_20px_rgba(34,211,238,0.5)] transition-all duration-300"
+            onClick={() => {
+              resetForm();
+              setIsModalOpen(true);
+            }}
+            className="bg-cyan-500/20 border border-cyan-400/20 text-cyan-300 px-5 py-2.5 rounded-xl font-medium cursor-pointer hover:bg-cyan-400 hover:text-black transition-all duration-300"
           >
             + Agregar
           </button>
@@ -190,11 +285,10 @@ export default function SongsTable() {
         </div>
 
         {/* TABLE */}
-        <div className="overflow-x-auto rounded-2xl border border-cyan-400/20 bg-[#0f172a]/70 shadow-inner shadow-cyan-500/5">
+        <div className="overflow-x-auto rounded-2xl border border-cyan-400/20 bg-[#0f172a]/70">
 
           <table className="w-full text-left text-sm text-gray-300">
 
-            {/* HEAD */}
             <thead className="bg-[#0f172a] text-gray-400 uppercase text-xs tracking-wider border-b border-cyan-500/10">
 
               <tr>
@@ -233,7 +327,6 @@ export default function SongsTable() {
 
             </thead>
 
-            {/* BODY */}
             <tbody>
 
               {loading ? (
@@ -267,7 +360,6 @@ export default function SongsTable() {
                     className="border-b border-cyan-500/5 hover:bg-cyan-500/5 transition-all duration-300"
                   >
 
-                    {/* ID */}
                     <td className="px-4 py-4">
 
                       <span className="px-3 py-1 rounded-full text-xs bg-purple-500/10 text-purple-300 border border-purple-500/10 font-semibold">
@@ -276,13 +368,14 @@ export default function SongsTable() {
 
                     </td>
 
-                    {/* IMAGEN */}
                     <td className="px-4 py-4">
 
-                      {song.imagen_url ? (
+                      {song.imagen ||
+                      song.imagen_url ? (
 
                         <img
                           src={
+                            song.imagen ||
                             song.imagen_url
                           }
                           alt={
@@ -301,7 +394,6 @@ export default function SongsTable() {
 
                     </td>
 
-                    {/* NOMBRE */}
                     <td className="px-4 py-4">
 
                       <div className="font-semibold text-white">
@@ -312,14 +404,12 @@ export default function SongsTable() {
 
                     </td>
 
-                    {/* ARTISTA */}
                     <td className="px-4 py-4 text-gray-300">
                       {
                         song.artista_cancion
                       }
                     </td>
 
-                    {/* GENEROS */}
                     <td className="px-4 py-4">
 
                       <div className="flex flex-wrap gap-2">
@@ -358,12 +448,10 @@ export default function SongsTable() {
 
                     </td>
 
-                    {/* ARCHIVO */}
                     <td className="px-4 py-4 text-gray-300 max-w-[220px] truncate">
                       {song.archivo_key}
                     </td>
 
-                    {/* PREVIEW */}
                     <td className="px-4 py-4">
 
                       {song.url ? (
@@ -371,7 +459,7 @@ export default function SongsTable() {
                         <audio
                           controls
                           src={song.url}
-                          className="h-9 opacity-80 hover:opacity-100 transition"
+                          className="h-9 opacity-80"
                         />
 
                       ) : (
@@ -384,7 +472,6 @@ export default function SongsTable() {
 
                     </td>
 
-                    {/* ACTIONS */}
                     <td className="px-4 py-4 text-right space-x-2 whitespace-nowrap">
 
                       <button
@@ -393,9 +480,18 @@ export default function SongsTable() {
                             song.archivo_key
                           )
                         }
-                        className="px-4 py-2 rounded-xl bg-cyan-500/10 border border-cyan-500/10 text-cyan-300 text-xs hover:bg-cyan-400 hover:text-black hover:shadow-[0_0_15px_rgba(34,211,238,0.4)] transition-all cursor-pointer"
+                        className="px-4 py-2 rounded-xl bg-cyan-500/10 border border-cyan-500/10 text-cyan-300 text-xs hover:bg-cyan-400 hover:text-black transition-all cursor-pointer"
                       >
                         Descargar
+                      </button>
+
+                      <button
+                        onClick={() =>
+                          handleEditSong(song)
+                        }
+                        className="px-4 py-2 rounded-xl bg-yellow-500/10 border border-yellow-500/10 text-yellow-300 text-xs hover:bg-yellow-400 hover:text-black transition-all cursor-pointer"
+                      >
+                        Editar
                       </button>
 
                       <button
@@ -425,15 +521,12 @@ export default function SongsTable() {
 
       </div>
 
-      {/* MODAL CREAR */}
+      {/* MODAL CREAR / EDITAR */}
       {isModalOpen && (
 
         <div
           className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm overflow-y-auto"
-          onClick={() => {
-            setIsModalOpen(false);
-            resetForm();
-          }}
+          onClick={closeModal}
         >
 
           <div className="min-h-screen flex items-start justify-center p-4 py-10">
@@ -442,34 +535,28 @@ export default function SongsTable() {
               onClick={(e) =>
                 e.stopPropagation()
               }
-              className="bg-[#111827] border border-cyan-500/10 w-full max-w-md rounded-3xl shadow-[0_0_50px_rgba(34,211,238,0.15)] overflow-hidden"
+              className="bg-[#111827] border border-cyan-500/10 w-full max-w-md rounded-3xl overflow-hidden"
             >
 
-              <div className="max-h-[90vh] overflow-y-auto p-6 custom-scroll">
+              <div className="max-h-[90vh] overflow-y-auto p-6">
 
-                {/* HEADER */}
                 <div className="mb-6">
 
                   <h3 className="text-2xl font-bold text-white">
-                    Nueva Canción
+                    {isEditMode
+                      ? "Editar Canción"
+                      : "Nueva Canción"}
                   </h3>
-
-                  <p className="text-sm text-gray-400 mt-1">
-                    Sube una canción
-                    con imagen
-                  </p>
 
                 </div>
 
-                {/* FORM */}
                 <form
                   onSubmit={
-                    handleUploadSong
+                    handleSubmit
                   }
                   className="space-y-5"
                 >
 
-                  {/* NOMBRE */}
                   <input
                     type="text"
                     placeholder="Nombre canción"
@@ -483,10 +570,9 @@ export default function SongsTable() {
                           e.target.value,
                       })
                     }
-                    className="w-full px-4 py-3 bg-[#1e293b] border border-cyan-500/10 text-white rounded-2xl placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                    className="w-full px-4 py-3 bg-[#1e293b] border border-cyan-500/10 text-white rounded-2xl"
                   />
 
-                  {/* ARTISTA */}
                   <input
                     type="text"
                     placeholder="Artista"
@@ -500,10 +586,9 @@ export default function SongsTable() {
                           e.target.value,
                       })
                     }
-                    className="w-full px-4 py-3 bg-[#1e293b] border border-cyan-500/10 text-white rounded-2xl placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                    className="w-full px-4 py-3 bg-[#1e293b] border border-cyan-500/10 text-white rounded-2xl"
                   />
 
-                  {/* GENEROS */}
                   <input
                     type="text"
                     placeholder="Géneros separados por coma"
@@ -517,7 +602,7 @@ export default function SongsTable() {
                           e.target.value,
                       })
                     }
-                    className="w-full px-4 py-3 bg-[#1e293b] border border-cyan-500/10 text-white rounded-2xl placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                    className="w-full px-4 py-3 bg-[#1e293b] border border-cyan-500/10 text-white rounded-2xl"
                   />
 
                   {/* IMAGEN */}
@@ -527,11 +612,11 @@ export default function SongsTable() {
                       Imagen de portada
                     </span>
 
-                    <div className="mt-2 flex items-center justify-center w-full px-4 py-6 border-2 border-dashed border-cyan-500/20 rounded-2xl cursor-pointer hover:border-cyan-400 hover:bg-cyan-500/5 transition-all relative">
+                    <div className="mt-2 flex items-center justify-center w-full px-4 py-6 border-2 border-dashed border-cyan-500/20 rounded-2xl cursor-pointer relative">
 
                       <span className="text-sm text-gray-400 text-center break-all">
-                        {newSong.image
-                          ? newSong.image
+                        {newSong.imagen
+                          ? newSong.imagen
                               .name
                           : "Haz clic para subir una imagen"}
                       </span>
@@ -541,15 +626,15 @@ export default function SongsTable() {
                         accept="image/*"
                         className="absolute inset-0 opacity-0 cursor-pointer"
                         onChange={(e) => {
-                          const image =
+                          const imagen =
                             e.target
                               .files?.[0];
 
-                          if (!image)
+                          if (!imagen)
                             return;
 
                           if (
-                            !image.type.startsWith(
+                            !imagen.type.startsWith(
                               "image/"
                             )
                           ) {
@@ -562,12 +647,12 @@ export default function SongsTable() {
 
                           const imagePreview =
                             URL.createObjectURL(
-                              image
+                              imagen
                             );
 
                           setNewSong({
                             ...newSong,
-                            image,
+                            imagen,
                             imagePreview,
                           });
                         }}
@@ -577,127 +662,97 @@ export default function SongsTable() {
 
                   </label>
 
-                  {/* IMAGE PREVIEW */}
                   {newSong.imagePreview && (
 
-                    <div className="bg-[#1e293b] p-4 rounded-2xl border border-cyan-500/10">
-
-                      <p className="text-xs text-gray-400 mb-3">
-                        Imagen
-                      </p>
-
-                      <img
-                        src={
-                          newSong.imagePreview
-                        }
-                        alt="preview"
-                        className="w-full h-52 object-cover rounded-2xl border border-cyan-500/10"
-                      />
-
-                    </div>
+                    <img
+                      src={
+                        newSong.imagePreview
+                      }
+                      alt="preview"
+                      className="w-full h-52 object-cover rounded-2xl"
+                    />
 
                   )}
 
-                  {/* AUDIO */}
-                  <label className="block">
+                  {!isEditMode && (
 
-                    <span className="text-sm text-gray-400">
-                      Archivo de audio
-                    </span>
+                    <label className="block">
 
-                    <div className="mt-2 flex items-center justify-center w-full px-4 py-8 border-2 border-dashed border-cyan-500/20 rounded-2xl cursor-pointer hover:border-cyan-400 hover:bg-cyan-500/5 transition-all relative">
-
-                      <span className="text-sm text-gray-400 text-center break-all">
-                        {newSong.file
-                          ? newSong.file
-                              .name
-                          : "Haz clic para subir un archivo"}
+                      <span className="text-sm text-gray-400">
+                        Archivo de audio
                       </span>
 
-                      <input
-                        type="file"
-                        accept="audio/*"
-                        className="absolute inset-0 opacity-0 cursor-pointer"
-                        onChange={(e) => {
-                          const file =
-                            e.target
-                              .files?.[0];
+                      <div className="mt-2 flex items-center justify-center w-full px-4 py-8 border-2 border-dashed border-cyan-500/20 rounded-2xl cursor-pointer relative">
 
-                          if (!file)
-                            return;
+                        <span className="text-sm text-gray-400 text-center break-all">
+                          {newSong.file
+                            ? newSong.file
+                                .name
+                            : "Haz clic para subir un archivo"}
+                        </span>
 
-                          if (
-                            !file.type.startsWith(
-                              "audio/"
-                            )
-                          ) {
-                            toast.error(
-                              "Solo se permiten archivos de audio"
-                            );
+                        <input
+                          type="file"
+                          accept="audio/*"
+                          className="absolute inset-0 opacity-0 cursor-pointer"
+                          onChange={(e) => {
+                            const file =
+                              e.target
+                                .files?.[0];
 
-                            return;
-                          }
+                            if (!file)
+                              return;
 
-                          const preview =
-                            URL.createObjectURL(
-                              file
-                            );
+                            if (
+                              !file.type.startsWith(
+                                "audio/"
+                              )
+                            ) {
+                              toast.error(
+                                "Solo se permiten audios"
+                              );
 
-                          setNewSong({
-                            ...newSong,
-                            file,
-                            preview,
-                          });
-                        }}
-                      />
+                              return;
+                            }
 
-                    </div>
+                            const preview =
+                              URL.createObjectURL(
+                                file
+                              );
 
-                  </label>
+                            setNewSong({
+                              ...newSong,
+                              file,
+                              preview,
+                            });
+                          }}
+                        />
 
-                  {/* AUDIO PREVIEW */}
-                  {newSong.preview && (
+                      </div>
 
-                    <div className="bg-[#1e293b] p-4 rounded-2xl border border-cyan-500/10">
-
-                      <p className="text-xs text-gray-400 mb-3">
-                        Preview
-                      </p>
-
-                      <audio
-                        controls
-                        src={
-                          newSong.preview
-                        }
-                        className="w-full"
-                      />
-
-                    </div>
+                    </label>
 
                   )}
 
-                  {/* BUTTONS */}
                   <div className="flex justify-end gap-3 pt-2">
 
                     <button
                       type="button"
-                      onClick={() => {
-                        setIsModalOpen(
-                          false
-                        );
-
-                        resetForm();
-                      }}
-                      className="px-5 py-2.5 rounded-xl bg-gray-700 text-white hover:bg-gray-600 transition-all cursor-pointer"
+                      onClick={
+                        closeModal
+                      }
+                      className="px-5 py-2.5 rounded-xl bg-gray-700 text-white"
                     >
                       Cancelar
                     </button>
 
                     <button
                       type="submit"
-                      className="px-5 py-2.5 rounded-xl bg-cyan-400 text-black font-semibold hover:bg-cyan-300 hover:shadow-[0_0_20px_rgba(34,211,238,0.5)] transition-all cursor-pointer"
+                      className="px-5 py-2.5 rounded-xl bg-cyan-400 text-black font-semibold"
                     >
-                      Subir
+                      {isEditMode
+                        ? "Guardar cambios"
+                        : "Subir"}
                     </button>
 
                   </div>
@@ -728,7 +783,7 @@ export default function SongsTable() {
             onClick={(e) =>
               e.stopPropagation()
             }
-            className="w-full max-w-md bg-[#111827] border border-red-500/10 rounded-3xl p-6 shadow-[0_0_50px_rgba(239,68,68,0.15)]"
+            className="w-full max-w-md bg-[#111827] border border-red-500/10 rounded-3xl p-6"
           >
 
             <div className="flex items-center justify-center w-16 h-16 mx-auto rounded-full bg-red-500/10 border border-red-500/10 mb-5">
@@ -746,11 +801,13 @@ export default function SongsTable() {
             <p className="text-gray-400 text-sm text-center mt-3 leading-relaxed">
 
               ¿Seguro que deseas eliminar{" "}
+
               <span className="text-white font-semibold">
                 {
                   songToDelete.nombre_cancion
                 }
               </span>
+
               ?
 
             </p>
@@ -761,14 +818,14 @@ export default function SongsTable() {
                 onClick={() =>
                   setSongToDelete(null)
                 }
-                className="px-5 py-2.5 rounded-xl bg-gray-700 text-white hover:bg-gray-600 transition-all cursor-pointer"
+                className="px-5 py-2.5 rounded-xl bg-gray-700 text-white"
               >
                 Cancelar
               </button>
 
               <button
                 onClick={handleDelete}
-                className="px-5 py-2.5 rounded-xl bg-red-500 text-white font-semibold hover:bg-red-400 hover:shadow-[0_0_20px_rgba(239,68,68,0.4)] transition-all cursor-pointer"
+                className="px-5 py-2.5 rounded-xl bg-red-500 text-white font-semibold"
               >
                 Sí, eliminar
               </button>

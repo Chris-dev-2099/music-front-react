@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { login } from "../services/authService";
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
+
 
 export default function LoginPage() {
 
@@ -22,93 +24,117 @@ export default function LoginPage() {
             });
             navigate("/");
         } catch (error) {
-            alert(error.message);
+            toast.error(error.message);
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center px-4">
-            <div className="w-full max-w-md bg-[#1f1f1f] border border-gray-800 rounded-2xl shadow-xl p-6 sm:p-8">
-                <h2 className="text-2xl font-bold text-center text-white">
-                    Iniciar Sesión
-                </h2>
+        <div className="min-h-screen bg-[#020617] flex items-center justify-center px-4 relative overflow-hidden">
 
-                <p className="text-sm text-gray-400 text-center mt-1">
-                    Panel administrativo de música
+            {/* Glow Background */}
+            <div className="absolute w-[500px] h-[500px] bg-cyan-500/10 blur-[150px] rounded-full top-[-150px] left-[-150px]" />
+
+            <div className="absolute w-[400px] h-[400px] bg-blue-500/10 blur-[150px] rounded-full bottom-[-100px] right-[-100px]" />
+
+            <div className="w-full max-w-md relative z-10">
+
+            <div className="bg-[#111827]/95 border border-cyan-400/20 rounded-3xl p-8 backdrop-blur-xl shadow-[0_0_50px_rgba(34,211,238,0.12)]">
+
+                {/* Header */}
+                <div className="text-center mb-8">
+
+                <div className="w-20 h-20 mx-auto mb-5 rounded-3xl bg-cyan-500/10 border border-cyan-400/20 flex items-center justify-center shadow-[0_0_30px_rgba(34,211,238,0.2)]">
+                    <span className="text-4xl">
+                    🎵
+                    </span>
+                </div>
+
+                <h1 className="text-3xl font-bold text-white">
+                    Ciafy Admin
+                </h1>
+
+                <p className="text-gray-400 mt-2">
+                    Inicia sesión para administrar tu catálogo musical
                 </p>
 
+                </div>
+
                 <form
-                    onSubmit={handleLogin}
-                    className="mt-6 space-y-4"
+                onSubmit={handleLogin}
+                className="space-y-5"
                 >
 
-                    {/* Username */}
-                    <div>
+                {/* Usuario */}
+                <div>
 
-                        <label className="block text-sm font-medium text-gray-300">
-                            Nombre de Usuario
-                        </label>
+                    <label className="block text-sm text-gray-300 mb-2">
+                    Usuario
+                    </label>
 
-                        <input
-                            type="text"
-                            placeholder="Ingresa tu nombre de usuario"
-                            value={username}
-                            onChange={(e) =>
-                                setUsername(
-                                    e.target.value
-                                )
-                            }
-                            disabled={loading}
-                            className="mt-1 w-full px-3 py-2 bg-[#2a2a2a] border border-gray-700 text-white rounded-lg placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
-                            required
-                        />
+                    <input
+                    type="text"
+                    placeholder="Ingresa tu usuario"
+                    value={username}
+                    onChange={(e) =>
+                        setUsername(e.target.value)
+                    }
+                    disabled={loading}
+                    required
+                    className="w-full px-4 py-3 bg-[#1e293b] border border-cyan-500/10 rounded-2xl text-white placeholder-gray-500 focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20 transition-all disabled:opacity-50"
+                    />
 
-                    </div>
+                </div>
 
-                    {/* Password */}
-                    <div>
+                {/* Password */}
+                <div>
 
-                        <label className="block text-sm font-medium text-gray-300">
-                            Contraseña
-                        </label>
+                    <label className="block text-sm text-gray-300 mb-2">
+                    Contraseña
+                    </label>
 
-                        <input
-                            type="password"
-                            placeholder="********"
-                            value={password}
-                            onChange={(e) =>
-                                setPassword(
-                                    e.target.value
-                                )
-                            }
-                            disabled={loading}
-                            className="mt-1 w-full px-3 py-2 bg-[#2a2a2a] border border-gray-700 text-white rounded-lg placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
-                            required
-                        />
+                    <input
+                    type="password"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) =>
+                        setPassword(e.target.value)
+                    }
+                    disabled={loading}
+                    required
+                    className="w-full px-4 py-3 bg-[#1e293b] border border-cyan-500/10 rounded-2xl text-white placeholder-gray-500 focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20 transition-all disabled:opacity-50"
+                    />
 
-                    </div>
+                </div>
 
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                    >
+                {/* Botón */}
+                <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full mt-2 py-3 rounded-2xl bg-cyan-500 text-black font-bold hover:bg-cyan-400 hover:shadow-[0_0_25px_rgba(34,211,238,0.5)] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+                >
+                    {loading && (
+                    <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                    )}
+                    {loading
+                    ? "Ingresando..."
+                    : "Ingresar"}
 
-                        {loading && (
-                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        )}
-
-                        {
-                            loading
-                                ? "Ingresando..."
-                                : "Ingresar"
-                        }
-
-                    </button>
+                </button>
 
                 </form>
+
+                {/* Footer */}
+                <div className="mt-8 pt-6 border-t border-cyan-500/10">
+
+                <p className="text-center text-xs text-gray-500">
+                    Plataforma administrativa de música
+                </p>
+
+                </div>
+
+            </div>
 
             </div>
 
